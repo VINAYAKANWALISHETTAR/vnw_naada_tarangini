@@ -1,0 +1,30 @@
+name: Build Windows installer
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Fetch yt-dlp (bundled into the installer)
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force vendor | Out-Null
+          Invoke-WebRequest https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe -OutFile vendor/yt-dlp.exe
+      - run: npm install --no-audit --no-fund
+      - run: npm run dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: naada_tarangini-setup
+          path: dist/naada_tarangini-setup-*.exe
+      - uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: dist/naada_tarangini-setup-*.exe
