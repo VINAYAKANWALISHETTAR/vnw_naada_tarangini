@@ -1,0 +1,58 @@
+# Fly.io configuration for the ಸಂಗೀತ website.
+#
+# The important line is internal_port below. It must equal the port the Node
+# process listens on, or Fly routes traffic to a port nothing is listening on
+# and every request comes back as a Host Error. server.js binds 0.0.0.0 and uses
+# PORT, falling back to 8080 — the same value as internal_port here.
+
+app = "ad-sangeetha-4053ca1d"
+primary_region = "bom"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  # Explicit so the port is the same value in three places: this file, the
+  # Dockerfile's ENV, and server.js's fallback. Fly still sets PORT itself.
+  PORT = "8080"
+  NODE_ENV = "production"
+
+[http_service]
+  internal_port = 8080
+  # The site is https only. A browser service worker, and therefore the PWA
+  # install, is refused on a plain http origin.
+  force_https = true
+
+  # This app is idle most of the time: a person searches, listens, and leaves.
+  # Keeping a machine running for that costs money for no benefit, so machines
+  # stop when idle and start again on the next request. The cold start is short
+  # (see below) and the stream cache warms after the first play.
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  # A failed instance is replaced instead of being left to answer errors.
+  processes = ["app"]
+
+# /api/health is the same endpoint the Dockerfile's HEALTHCHECK uses, so a
+# machine is only sent traffic once it can genuinely answer.
+[[http_service.checks]]
+  interval = "30s"
+  timeout = 5s
+  grace_period = "15s"
+  method = "GET"
+  path = "/api/health"
+
+# yt-dlp is what turns a search result into a playable stream URL, and it takes
+# around five seconds per track. That is slow enough to matter for the request
+# that triggers it, and slow enough that the machine cannot be treated as a pure
+# static site — but it is well inside Fly's default request timeout, so no
+# per-request override is needed here (fly.toml has no such field for
+# http_service; a genuinely long resolve would need fly-replay in the response).
+#
+# shared-cpu-1x is sized for that: stream resolution is network-bound and short,
+# not CPU-heavy. The 30s health check above is what keeps a cold machine from
+# receiving a request it cannot yet answer.
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
