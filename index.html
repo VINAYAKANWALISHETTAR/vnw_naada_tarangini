@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!--
+      script-src drops 'unsafe-inline': there is no inline <script> block and no
+      inline event-handler attribute in this document, so allowing it only
+      widened the XSS surface. style-src keeps it because Swiper writes inline
+      styles onto the slides.
+
+      frame-src/object-src/base-uri/form-action 'none' are defence in depth:
+      the widget embeds no frame, plugin, <base> or form.
+
+      img-src, media-src and connect-src stay broad on purpose: covers come from
+      i.ytimg.com, audio from *.googlevideo.com and search from
+      youtube.com, none of which can be enumerated in advance.
+    -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src * blob: data:; connect-src 'self' https:; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none';">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="theme-color" content="#12121a">
+    <meta name="description" content="Naada Tarangini — search and play YouTube Music in a clean, ad-free player. Also a floating, always-on-top Windows desktop widget.">
+    <link rel="apple-touch-icon" href="/sangeeta_icon.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" href="sangeeta_icon.png">
+    <title>Naada Tarangini</title>
+</head>
+
+    <body>
+        <!-- The whole widget is one draggable card so it can float anywhere. -->
+        <div class="app-shell">
+
+            <!-- Title bar: drag handle + window controls (minimise / quit) -->
+            <div class="titlebar">
+                <span class="brand" id="brand"><i class="fa-solid fa-music"></i> Naada Tarangini</span>
+                <span class="build-badge" id="buildBadge" title="Which build is running">…</span>
+                <div class="titlebar-actions">
+                    <button class="win-btn" id="libraryBtn" title="Queue, favourites and history">
+                        <i class="fa-solid fa-list-ul"></i>
+                    </button>
+                    <button class="win-btn" id="desktopBtn" title="Add to desktop">
+                        <i class="fa-solid fa-desktop"></i>
+                    </button>
+                    <button class="win-btn" id="minimizeBtn" title="Shrink to a bar">
+                        <i class="fa-solid fa-minus"></i>
+                    </button>
+                    <button class="win-btn danger" id="closeBtn" title="Quit Naada Tarangini">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- YouTube Music search -->
+            <div class="search-bar">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input
+                    id="searchInput"
+                    type="text"
+                    placeholder="Search YouTube Music or paste a link"
+                    aria-label="Search YouTube Music, or paste a YouTube link"
+                    autocomplete="off"
+                    spellcheck="false" />
+                <button class="search-go" id="searchBtn" title="Search">
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+
+            <div class="search-meta" id="searchStatus"></div>
+
+            <ul class="search-results" id="searchResults" hidden></ul>
+
+            <!--
+              Queue / Favourites / History.
+
+              One panel with three tabs rather than three sections, because the
+              widget is a small floating card and permanent lists would leave no
+              room for the cover and the controls. It is built on demand and torn
+              down on close, so an untouched panel costs nothing.
+            -->
+            <div class="library-panel" id="libraryPanel" hidden>
+                <div class="library-head">
+                    <div class="library-tabs" role="tablist" aria-label="Library">
+                        <button class="library-tab is-active" id="tabQueue" role="tab" aria-selected="true">
+                            Queue <span class="tab-count" id="queueCount">0</span>
+                        </button>
+                        <button class="library-tab" id="tabFavs" role="tab" aria-selected="false">
+                            Favourites <span class="tab-count" id="favCount">0</span>
+                        </button>
+                        <button class="library-tab" id="tabHistory" role="tab" aria-selected="false">
+                            History
+                        </button>
+                    </div>
+                    <button class="library-close" id="libraryClose" title="Close" aria-label="Close panel">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <div class="library-list" id="libraryList"></div>
+                <div class="library-foot" id="libraryFoot">
+                    <button class="library-action" id="clearQueueBtn">
+                        <i class="fa-solid fa-trash-can"></i> Reset to the 7 songs
+                    </button>
+                </div>
+            </div>
+
+            <!-- Album cover carousel (slides are generated from the queue) -->
+            <div class="album-cover">
+              <div class="swiper">
+                <div class="swiper-wrapper" id="swiperWrapper"></div>
+              </div>
+            </div>
+
+            <!-- Music player -->
+            <div class="music-player">
+              <h1 id="trackTitle">Loading…</h1>
+              <p id="trackArtist">YouTube Music</p>
+
+              <audio id="song" preload="none"></audio>
+
+              <input type="range" value="0" id="progress" min="0" max="100" step="0.1" aria-label="Seek" />
+
+              <div class="time-row">
+                <span id="currentTime">0:00</span>
+                <span id="totalTime">0:00</span>
+              </div>
+
+              <div class="volume-row">
+                <button class="mini-btn" id="muteBtn" title="Mute">
+                  <i class="fa-solid fa-volume-high"></i>
+                </button>
+                <input type="range" id="volume" min="0" max="100" value="85" title="Volume" aria-label="Volume" />
+                <button class="auto-btn is-on" id="autoNextBtn" title="Play the next track automatically">
+                  <i class="fa-solid fa-forward-step"></i><span>Auto</span>
+                </button>
+                <button class="auto-btn" id="shuffleBtn" title="Shuffle" aria-pressed="false">
+                  <i class="fa-solid fa-shuffle"></i>
+                </button>
+                <button class="auto-btn" id="repeatBtn" title="Repeat off" aria-pressed="false">
+                  <i class="fa-solid fa-repeat"></i>
+                </button>
+                <button class="auto-btn" id="favBtn" title="Save to favourites" aria-pressed="false">
+                  <i class="fa-regular fa-heart"></i>
+                </button>
+              </div>
+
+              <div class="controls">
+                <button class="backward" title="Previous">
+                  <i class="fa-solid fa-backward"></i>
+                </button>
+                <button class="play-pause-btn" title="Play / Pause">
+                  <i class="fa-solid fa-play" id="controlIcon"></i>
+                </button>
+                <button class="forward" title="Next">
+                  <i class="fa-solid fa-forward"></i>
+                </button>
+              </div>
+            </div>
+
+<div class="toast" id="toast" hidden></div>
+
+            <!-- Mini bar: what is left when the card is shrunk. -->
+            <div class="mini-bar" id="miniBar" hidden>
+                <img class="mini-cover" id="miniCover" alt="">
+                <div class="mini-text"><strong id="miniTitle"></strong><span id="miniArtist"></span></div>
+                <button class="mini-ctl" id="miniPrev" title="Previous"><i class="fa-solid fa-backward-step"></i></button>
+                <button class="mini-ctl is-main" id="miniPlay" title="Play / pause"><i class="fa-solid fa-play" id="miniPlayIcon"></i></button>
+                <button class="mini-ctl" id="miniNext" title="Next"><i class="fa-solid fa-forward-step"></i></button>
+                <button class="mini-ctl" id="miniExpand" title="Expand"><i class="fa-solid fa-chevron-up"></i></button>
+            </div>
+        </div>
+
+        <!--
+          "Add to desktop" dialog, shown only on the website.
+
+          A browser cannot create an always-on-top native window, so this does
+          not pretend otherwise. It offers the two things that really are
+          possible and says plainly what each one does not have:
+            - the real Windows app (Electron): always-on-top, tray, snap, desktop shortcut
+            - a PWA install: a standalone window with its own icon, but none of the above
+        -->
+        <div class="install-backdrop" id="installPanel" hidden>
+            <div class="install-card" role="dialog" aria-modal="true" aria-labelledby="installHeading">
+                <div class="install-head">
+                    <h2 id="installHeading"><i class="fa-solid fa-desktop"></i> Naada Tarangini on your computer</h2>
+                    <button class="install-close" id="installClose" title="Close" aria-label="Close">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <div class="install-option">
+                    <h3><i class="fa-brands fa-windows"></i> Windows desktop app</h3>
+                    <p class="install-what">The real Naada Tarangini application. A floating widget that stays on top of
+                        everything, lives in the system tray, snaps to screen corners and adds itself to
+                        your desktop.</p>
+                    <a class="install-action" id="downloadWindows" href="#" download>
+                        <i class="fa-solid fa-download"></i> Download for Windows
+                    </a>
+                    <p class="install-note" id="windowsNote"></p>
+                </div>
+
+                <div class="install-option">
+                    <h3><i class="fa-solid fa-window-maximize"></i> Install as an app</h3>
+                    <p class="install-what">Opens Naada Tarangini in its own window with its own icon, like a normal app.</p>
+                    <button class="install-action is-alt" id="installPwa" disabled>
+                        <i class="fa-solid fa-arrow-down-to-bracket"></i> <span id="installPwaLabel">Checking…</span>
+                    </button>
+                    <p class="install-note">
+                        This is a browser app, so it cannot stay always-on-top, sit in the system tray, or snap
+                        to a corner. For those, use the Windows desktop app above.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+        <script src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+        <script src="js/ytmusic.js"></script>
+        <script src="js/main.js"></script>
+    </body>
+
+</html>

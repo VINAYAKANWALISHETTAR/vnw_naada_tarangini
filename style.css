@@ -1,0 +1,1462 @@
+/* author: https://codepen.io/ecemgo/pen/vYPadZz
+Ecem Gokdogan */
+
+:root {
+  --primary-clr: rgba(228, 228, 229, 1);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: system-ui, "Segoe UI", "Nirmala UI", sans-serif;
+}
+
+body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  width: 100%;
+  background: #14161f;
+}
+
+.album-cover {
+  width: 90%;
+}
+
+.swiper {
+  width: 100%;
+  padding: 40px 0 100px;
+}
+
+.swiper-slide {
+  position: relative;
+  max-width: 200px;
+  aspect-ratio: 1/1;
+  border-radius: 10px;
+  /* A cover that is still loading, or one that failed, shows this instead of a
+     blank white square. */
+  background: linear-gradient(145deg, #2a2333, #191320);
+}
+
+/* Every source for this cover failed: local file, remote thumbnail, and the
+   smaller fallback. The img is removed, so the slide keeps this gradient rather
+   than showing the browser's broken-image icon. */
+.swiper-slide.is-cover-missing::after {
+  content: "\f07b";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  font-size: 2rem;
+  color: rgba(255, 255, 255, 0.3);
+  pointer-events: none;
+}
+
+.swiper-slide img {
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  -webkit-box-reflect: below -5px linear-gradient(transparent, transparent, rgba(0, 0, 0, 0.4));
+  transform-origin: center;
+  transform: perspective(800px);
+  transition: 0.3s ease-out;
+  pointer-events: none;
+  user-select: none;
+  /* The slide is square, so a failed load should not collapse to a 0-height
+     image icon inside it. */
+  display: block;
+}
+
+.swiper-slide-active .overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 98%;
+  background-color: rgba(28, 22, 37, 0.6);
+  border-radius: inherit;
+  opacity: 0;
+  transition: all 0.4s linear;
+}
+
+.swiper-slide:hover .overlay {
+  opacity: 1;
+}
+
+.swiper-slide .overlay ion-icon {
+  opacity: 0;
+}
+
+.swiper-slide-active:hover .overlay ion-icon {
+  font-size: 4rem;
+  color: #eb0b0b;
+  opacity: 1;
+  cursor: pointer;
+}
+
+/* Music Player */
+
+.music-player {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: var(--primary-clr);
+  width: 380px;
+  padding: 10px 30px;
+  border-radius: 20px;
+}
+
+.music-player h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.music-player p {
+  font-size: 1rem;
+  font-weight: 400;
+  opacity: 0.6;
+}
+
+/* Music Player Progress */
+
+#progress {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 7px;
+  background: rgba(163, 162, 164, 0.4);
+  border-radius: 4px;
+  margin: 32px 0 24px;
+  cursor: pointer;
+}
+
+#progress::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  background: rgba(163, 162, 164, 0.9);
+  width: 16px;
+  aspect-ratio: 1/1;
+  border-radius: 50%;
+  outline: 4px solid var(--primary-clr);
+  box-shadow: 0 6px 10px rgba(5, 36, 28, 0.3);
+}
+
+/* Music Player Controls */
+
+.controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.controls button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  aspect-ratio: 1/1;
+  margin: 20px;
+  background: rgba(163, 162, 164, 0.3);
+  color: var(--primary-clr);
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  outline: 0;
+  font-size: 1.1rem;
+  box-shadow: 0 10px 20px rgba(5, 36, 28, 0.3);
+  cursor: pointer;
+  transition: all 0.3s linear;
+}
+
+.controls button:is(:hover, :focus-visible) {
+  transform: scale(0.96);
+}
+
+.controls button:nth-child(2) {
+  transform: scale(1.3);
+}
+
+.controls button:nth-child(2):is(:hover, :focus-visible) {
+  transform: scale(1.25);
+}
+
+/* ------------------------------------------------------------------------
+   FlowTune desktop widget
+   Same glassmorphism theme, re-sized to live inside the floating window.
+   ------------------------------------------------------------------------ */
+
+body {
+  padding: 0;
+  overflow: hidden;
+}
+
+.app-shell {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-radius: 22px;
+  /* Deliberately no backdrop-filter: a full-window blur forces a new layer
+     every frame. A solid translucent fill looks the same and costs nothing. */
+  background: rgba(24, 24, 32, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  -webkit-app-region: drag;
+  overflow: hidden auto;
+  contain: paint;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+}
+
+.app-shell::-webkit-scrollbar {
+  width: 6px;
+}
+
+.app-shell::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+}
+
+button,
+input,
+.overlay,
+.search-results,
+/* The whole shell is a drag handle in the desktop build, so anything the user
+   has to click or scroll has to opt out or the drag swallows the gesture. */
+.library-panel {
+  -webkit-app-region: no-drag;
+}
+
+/* Title bar ------------------------------------------------------------- */
+
+.titlebar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 16px 4px;
+  color: var(--primary-clr);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.75;
+  user-select: none;
+  /* The action row is the part that must stay whole, so the brand is the part
+     that gives way first when the card gets narrow. */
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.titlebar-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
+/* Which build is running, and whether desktop features are available. */
+.build-badge {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--primary-clr);
+  opacity: 0.55;
+  padding: 2px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  white-space: nowrap;
+  user-select: none;
+  margin-left: auto;
+  margin-right: 8px;
+}
+
+.build-badge.is-web {
+  opacity: 0.85;
+  border-color: rgba(235, 170, 11, 0.55);
+  color: #ffcf6b;
+}
+
+.win-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  font-size: 0.7rem;
+  color: var(--primary-clr);
+  background: rgba(163, 162, 164, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.win-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.win-btn.is-busy {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.win-btn.is-unavailable,
+.win-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.win-btn.danger:hover {
+  background: #eb0b0b;
+  border-color: #eb0b0b;
+}
+
+.win-btn.is-pinned,
+.win-btn.is-on {
+  color: #fff;
+  background: rgba(235, 11, 11, 0.45);
+  border-color: rgba(235, 11, 11, 0.6);
+}
+
+/* Search bar ------------------------------------------------------------ */
+
+.search-bar {
+  width: calc(100% - 32px);
+  margin: 10px 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  color: var(--primary-clr);
+  background: rgba(163, 162, 164, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 14px;
+  transition: all 0.25s ease;
+}
+
+.search-bar:focus-within {
+  border-color: rgba(255, 255, 255, 0.45);
+  background: rgba(163, 162, 164, 0.32);
+}
+
+.search-bar > i {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.search-bar input {
+  flex: 1;
+  min-width: 0;
+  color: var(--primary-clr);
+  background: transparent;
+  border: 0;
+  outline: 0;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.search-bar input::placeholder {
+  color: rgba(228, 228, 229, 0.55);
+  font-weight: 400;
+}
+
+.search-go {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  font-size: 0.8rem;
+  color: var(--primary-clr);
+  background: rgba(255, 255, 255, 0.12);
+  border: 0;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.search-go:hover {
+  background: #eb0b0b;
+  color: #fff;
+}
+
+.search-go.is-busy i {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.search-meta {
+  width: calc(100% - 32px);
+  margin: 8px 16px 0;
+  min-height: 16px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--primary-clr);
+  opacity: 0.6;
+  text-align: center;
+}
+
+/* Search results -------------------------------------------------------- */
+
+.search-results {
+  width: calc(100% - 32px);
+  margin: 8px 16px 0;
+  padding: 6px;
+  list-style: none;
+  max-height: 236px;
+  overflow-y: auto;
+  background: rgba(20, 20, 28, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+}
+
+.search-results[hidden] {
+  display: none;
+}
+
+.search-results li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.search-results li:hover,
+.search-results li.is-active {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.search-results img {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 8px;
+  flex: 0 0 auto;
+}
+
+.result-text {
+  min-width: 0;
+  flex: 1;
+}
+
+.result-text strong,
+.result-text span {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--primary-clr);
+}
+
+.result-text span {
+  font-weight: 400;
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+
+.result-duration {
+  font-size: 0.72rem;
+  opacity: 0.55;
+  flex: 0 0 auto;
+}
+
+/* Album cover inside the widget ---------------------------------------- */
+
+.app-shell .album-cover {
+  width: 100%;
+}
+
+.app-shell .swiper {
+  padding: 16px 0 30px;
+}
+
+.app-shell .swiper-slide {
+  max-width: 175px;
+}
+
+/* Player ---------------------------------------------------------------- */
+
+.app-shell .music-player {
+  width: 100%;
+  max-width: 420px;
+  padding: 0 24px 22px;
+}
+
+.time-row {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  margin-top: -18px;
+  margin-bottom: 6px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--primary-clr);
+  opacity: 0.55;
+}
+
+.volume-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 12px;
+  margin: 14px 0 4px;
+  color: var(--primary-clr);
+}
+
+#volume {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: 1 1 90px;
+  /* Without this a flex item refuses to shrink below its content width, so the
+     slider pushed the mode buttons off a narrow card instead of compressing. */
+  min-width: 60px;
+  height: 5px;
+  background: rgba(163, 162, 164, 0.4);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#volume::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  background: rgba(228, 228, 229, 0.9);
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  outline: 3px solid var(--primary-clr);
+  box-shadow: 0 4px 8px rgba(5, 36, 28, 0.3);
+}
+
+.mini-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  font-size: 0.85rem;
+  color: var(--primary-clr);
+  background: rgba(163, 162, 164, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.mini-btn:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.mini-btn.is-muted {
+  color: #eb0b0b;
+  border-color: rgba(235, 11, 11, 0.5);
+}
+
+.auto-btn {
+  /* The repeat-one badge is positioned against this button. */
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--primary-clr);
+  background: rgba(163, 162, 164, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  /* Comfortably tappable on a phone, without the desktop card growing for it. */
+  min-height: 34px;
+}
+
+.auto-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.auto-btn.is-on {
+  color: #fff;
+  background: rgba(235, 11, 11, 0.4);
+  border-color: rgba(235, 11, 11, 0.65);
+  box-shadow: 0 4px 14px rgba(235, 11, 11, 0.25);
+}
+
+.app-shell .controls button {
+  margin: 18px 16px 4px;
+}
+
+/* Repeat-one marker ------------------------------------------------------ */
+
+/* A "1" badge on the repeat button. Without it "repeat one" was the same glyph
+   as "repeat all" and differed only by colour, which is not readable at this
+   size. */
+.repeat-one {
+  position: absolute;
+  top: -6px;
+  right: -5px;
+  min-width: 14px;
+  padding: 0 3px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 14px;
+  color: #fff;
+  text-align: center;
+  background: var(--primary-clr);
+  border-radius: 999px;
+}
+
+/* Result row actions ----------------------------------------------------- */
+
+.result-actions {
+  display: flex;
+  gap: 4px;
+  flex: 0 0 auto;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+/* Shown on hover or keyboard focus only, so the rows stay clean until the
+   listener is actually reaching for the controls. */
+.search-results li:hover .result-actions,
+.search-results li.is-active .result-actions,
+.search-results li:focus-within .result-actions {
+  opacity: 1;
+}
+
+.result-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 0.72rem;
+  color: var(--primary-clr);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.result-action:hover {
+  color: #fff;
+  background: rgba(235, 11, 11, 0.45);
+  border-color: rgba(235, 11, 11, 0.7);
+}
+
+/* Touch devices have no hover, so the buttons would simply never appear. */
+@media (hover: none) {
+  .result-actions {
+    opacity: 1;
+  }
+}
+
+/* Library panel ---------------------------------------------------------- */
+
+.library-panel {
+  display: flex;
+  flex-direction: column;
+  /* The shell is a flex column with align-items:center, so without an explicit
+     width this sized itself to its widest tab label and overflowed the card on
+     a phone. It is a block row, not an intrinsic-width one. */
+  width: 100%;
+  min-height: 0;
+  margin: 0 14px 10px;
+  overflow: hidden;
+  background: rgba(20, 20, 30, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  backdrop-filter: blur(12px);
+}
+
+.library-panel[hidden] {
+  display: none;
+}
+
+.library-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 8px 8px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.library-tabs {
+  display: flex;
+  flex: 1 1 auto;
+  gap: 4px;
+  min-width: 0;
+}
+
+.library-tab {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 6px 8px;
+  overflow: hidden;
+  font-family: inherit;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: rgba(255, 255, 255, 0.72);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.library-tab:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.library-tab.is-active {
+  color: #fff;
+  background: rgba(235, 11, 11, 0.4);
+  border-color: rgba(235, 11, 11, 0.6);
+}
+
+.tab-count {
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+}
+
+.library-close {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  font-size: 0.8rem;
+  color: var(--primary-clr);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.library-close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* Scrolls independently of the rest of the widget, so a long queue never
+   pushes the player controls off the card. The vh cap matters on a phone: a
+   fixed 220px list plus the carousel left the transport controls below the
+   fold on anything shorter than about 700px. */
+.library-list {
+  flex: 1 1 auto;
+  max-height: min(220px, 38vh);
+  padding: 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.library-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.library-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+}
+
+.library-empty {
+  margin: 0;
+  padding: 22px 14px;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.6);
+  text-align: center;
+}
+
+.library-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.library-row:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.library-row.is-playing {
+  background: rgba(235, 11, 11, 0.24);
+  box-shadow: inset 0 0 0 1px rgba(235, 11, 11, 0.5);
+}
+
+.library-cover {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+}
+
+.library-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 2px;
+}
+
+.library-text strong,
+.library-text span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.library-text strong {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.library-text span {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.library-remove {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.6);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.library-remove:hover {
+  color: #fff;
+  background: rgba(235, 11, 11, 0.5);
+}
+
+.library-foot {
+  padding: 6px 8px 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.library-foot[hidden] {
+  display: none;
+}
+
+.library-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  padding: 7px 10px;
+  font-family: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--primary-clr);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.library-action:hover {
+  color: #fff;
+  background: rgba(235, 11, 11, 0.4);
+  border-color: rgba(235, 11, 11, 0.6);
+}
+
+/* Toast ----------------------------------------------------------------- */
+
+.toast {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  max-width: calc(100% - 40px);
+  padding: 9px 16px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  text-align: center;
+  color: var(--primary-clr);
+  background: rgba(20, 20, 28, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  z-index: 20;
+  animation: toast-in 0.25s ease;
+}
+
+.toast[hidden] {
+  display: none;
+}
+
+.toast.is-error {
+  border-color: rgba(235, 11, 11, 0.6);
+  color: #ffd7d7;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+}
+
+/* Window is a plain browser tab: centre the card and drop the app padding.
+   body has overflow:hidden (set for the widget), which in a browser window
+   shorter than the card clipped the bottom of the player with no way to
+   scroll to it, so scrolling is turned back on for this mode only. */
+body.is-web {
+  overflow: auto;
+}
+
+body.is-web .app-shell {
+  margin: 4vh auto;
+  max-width: 460px;
+  min-height: 640px;
+}
+
+/* On the website the title bar is not a window title bar.
+   Minimise/quit/snap/pin act on a native Electron window that does not exist
+   here, so they are removed rather than left as buttons that do nothing. The
+   desktop button stays: it is the way to get the real app. */
+body.is-web #minimizeBtn,
+body.is-web #closeBtn,
+body.is-web #snapBtn,
+body.is-web #pinBtn {
+  display: none;
+}
+
+/* Add-to-desktop dialog ------------------------------------------------- */
+
+.install-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(6, 6, 12, 0.78);
+  backdrop-filter: blur(3px);
+  animation: fade-in 0.16s ease-out;
+}
+
+.install-backdrop[hidden] {
+  display: none;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+}
+
+.install-card {
+  width: min(460px, 100%);
+  max-height: min(88vh, 720px);
+  overflow-y: auto;
+  padding: 20px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: #17171f;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  animation: install-in 0.18s ease-out;
+}
+
+@keyframes install-in {
+  from { transform: translateY(10px) scale(0.985); }
+}
+
+.install-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.install-head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: #f2f2f7;
+}
+
+.install-head h2 i {
+  color: #ebaa0b;
+  margin-right: 6px;
+}
+
+.install-close {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #9a9aae;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.install-close:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: #f2f2f7;
+}
+
+.install-option {
+  padding: 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.install-option + .install-option {
+  margin-top: 12px;
+}
+
+.install-option h3 {
+  margin: 0 0 6px;
+  font-size: 0.9rem;
+  color: #f2f2f7;
+}
+
+.install-option h3 i {
+  color: #ebaa0b;
+  margin-right: 6px;
+}
+
+.install-what {
+  margin: 0 0 12px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: #a6a6b8;
+}
+
+.install-note {
+  margin: 10px 0 0;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: #7d7d90;
+}
+
+.install-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border: none;
+  border-radius: 9px;
+  background: #ebaa0b;
+  color: #1a1508;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.install-action:hover {
+  background: #f5bd3a;
+}
+
+.install-action.is-alt {
+  background: rgba(255, 255, 255, 0.10);
+  color: #f2f2f7;
+}
+
+.install-action.is-alt:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.install-action[disabled] {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Phones and small windows. The widget is a fixed 460px card, so the only
+   thing that has to give on a narrow screen is its margins and the artwork.
+   The rest of the phone rules live in the responsive block at the end of this
+   file, with the other breakpoints. */
+@media (max-width: 520px) {
+  body.is-web .app-shell {
+    margin: 0 auto;
+    min-height: 100vh;
+    max-width: 100%;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+
+  .install-card {
+    padding: 16px;
+    border-radius: 14px;
+  }
+}
+
+/* Loading state for the play button ------------------------------------- */
+
+/* A YouTube stream lookup runs yt-dlp and takes seconds, so the button has to
+   say it is working. Spinning the play glyph read as a glitch; this is a plain
+   ring drawn with borders, which also renders when the icon font is missing. */
+.play-pause-btn.is-loading i {
+  display: block;
+  width: 18px;
+  height: 18px;
+  box-sizing: border-box;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.play-pause-btn.is-loading i::before {
+  content: none;
+}
+
+.play-pause-btn:disabled {
+  cursor: progress;
+  opacity: 0.75;
+}
+
+button:disabled {
+  pointer-events: none;
+}
+
+/* Carousel fallback ------------------------------------------------------- */
+
+/* Only used when the Swiper CDN cannot be reached, so both the bundle and its
+   stylesheet are missing. The same covers are laid out as a plain scrollable
+   strip, which keeps the carousel usable instead of leaving an empty box. */
+.app-shell .swiper-wrapper.is-plain {
+  display: flex;
+  gap: 24px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  padding: 8px 0;
+}
+
+.app-shell .swiper-wrapper.is-plain::-webkit-scrollbar {
+  display: none;
+}
+
+.app-shell .swiper-wrapper.is-plain .swiper-slide {
+  flex: 0 0 auto;
+}
+
+/* Responsive layout -------------------------------------------------------- */
+
+/* The widget is one card that has to work as a desktop window, a phone in
+   portrait and a short laptop window. Three axes are handled separately because
+   they fail differently:
+
+     width  — too narrow, so rows wrap and type truncates
+     height — too short, so the carousel gives up space first
+     pointer — hover-only affordances are useless on touch
+
+   Nothing here hides a control. Wrapping and scaling are preferred over
+   removing, because a button that is simply absent on a phone is a feature
+   nobody can find. */
+
+@media (max-width: 560px) {
+  .titlebar {
+    padding: 10px 12px 4px;
+    gap: 6px;
+  }
+
+  .brand {
+    font-size: 0.78rem;
+    gap: 6px;
+  }
+
+  /* Six window buttons do not fit beside the brand on a phone. The build badge
+     is diagnostics, not a control, so it is the one thing that goes. */
+  .build-badge {
+    display: none;
+  }
+
+  .titlebar-actions {
+    gap: 4px;
+  }
+
+  .app-shell .win-btn {
+    width: 30px;
+    height: 30px;
+  }
+
+  /* The search bar and the carousel both carry side padding, and on a phone
+     that is wasted width on every screen. */
+  .search-bar {
+    margin: 0 12px;
+  }
+
+  .app-shell .music-player {
+    padding: 0 16px 18px;
+  }
+
+  .library-panel {
+    margin: 0 12px 10px;
+  }
+
+  .library-list {
+    max-height: min(200px, 34vh);
+  }
+
+  /* Six pill buttons plus a slider is a lot for one line. Let them wrap onto a
+     second row and centre, rather than shrinking the tap targets below the
+     34px floor used above. */
+  .volume-row {
+    gap: 8px;
+  }
+
+  .auto-btn {
+    padding: 8px 10px;
+    font-size: 0.68rem;
+  }
+
+  .auto-btn span:not(.repeat-one) {
+    display: none;
+  }
+
+  /* The "Auto" label is the only one carrying meaning the glyph does not, so
+     it stays; the repeat-one badge is a superscript and must not be hidden. */
+  #autoNextBtn span {
+    display: inline;
+  }
+
+  .repeat-one {
+    top: -4px;
+    right: -3px;
+    min-width: 12px;
+    font-size: 0.55rem;
+    line-height: 12px;
+  }
+
+  .result-action {
+    width: 32px;
+    height: 32px;
+  }
+
+  .library-row {
+    padding: 7px 6px;
+  }
+
+  .library-cover {
+    width: 34px;
+    height: 34px;
+  }
+}
+
+@media (max-width: 400px) {
+  .app-shell .swiper-slide {
+    max-width: 120px;
+  }
+
+  .app-shell .swiper {
+    padding: 10px 0 22px;
+  }
+
+  .app-shell .music-player {
+    padding: 0 12px 16px;
+  }
+
+  .app-shell .controls button {
+    margin: 14px 10px 2px;
+  }
+
+  /* Three tabs side by side stop being readable here, so the counts — which
+     are the only part that is genuinely optional — are dropped and the labels
+     get the room. */
+  .tab-count {
+    display: none;
+  }
+
+  .library-tab {
+    font-size: 0.66rem;
+    padding: 6px 4px;
+  }
+}
+
+/* Short windows: the carousel is the most elastic thing on the card, so it
+   takes the hit first and the transport controls stay on screen. */
+@media (max-height: 700px) {
+  .app-shell .swiper {
+    padding: 8px 0 18px;
+  }
+
+  .app-shell .swiper-slide {
+    max-width: 140px;
+  }
+
+  #progress {
+    margin: 22px 0 20px;
+  }
+
+  .library-list {
+    max-height: min(180px, 30vh);
+  }
+}
+
+@media (max-height: 560px) {
+  .app-shell .swiper {
+    padding: 4px 0 12px;
+  }
+
+  .app-shell .swiper-slide {
+    max-width: 104px;
+  }
+
+  .app-shell .controls button {
+    margin: 12px 14px 2px;
+  }
+
+  .library-list {
+    max-height: 26vh;
+  }
+}
+
+/* Wide screens: the card is a fixed 460px, so on a large display it is centred
+   rather than stretched. This only matters for the web build and the install
+   dialog, which can be much wider than the card. */
+@media (min-width: 900px) {
+  body.is-web .app-shell {
+    margin: 0 auto;
+  }
+}
+
+/* Respect a reduced-motion preference. The card animates the carousel and
+   spins the loading ring; neither carries information that a static frame
+   loses. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Coarse pointers get the hover-revealed controls permanently, and a larger
+   minimum tap target. The queue and result rows are the only hover-only
+   affordances in the card. */
+@media (hover: none) and (pointer: coarse) {
+  .result-actions {
+    opacity: 1;
+  }
+
+  .auto-btn,
+  .win-btn,
+  .mini-btn,
+  .library-tab,
+  .library-close,
+  .library-remove,
+  .result-action,
+  .controls button,
+  .play-pause-btn {
+    min-height: 40px;
+  }
+
+  .result-action {
+    width: 40px;
+    height: 40px;
+  }
+
+  .library-remove {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* ---- Naada Tarangini: flat, rounded, no motion ------------------------- */
+.app-shell { background: #14161f; border-radius: 14px; border-color: rgba(255, 255, 255, 0.08); box-shadow: none; }
+.win-btn, .search-bar, .search-go, .search-results, .library-panel, .auto-btn, .mini-btn,
+.result-action, .library-row, .library-tab, .library-action { border-radius: 10px; }
+.search-results li, .library-cover, .search-results img { border-radius: 8px; }
+.controls button { border-radius: 50%; }
+.swiper-slide img { border-radius: 12px; }
+#desktopBtn { display: none; }
+body.is-web #desktopBtn { display: flex; }
+/* Transitions and animations finish instantly (events still fire, so Swiper keeps working). */
+*, *::before, *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+.play-pause-btn.is-loading i { animation: none !important; }
+
+/* Mini bar */
+.mini-bar { display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 12px; }
+.mini-bar[hidden] { display: none; }
+.mini-cover { flex: 0 0 auto; width: 44px; height: 44px; object-fit: cover; background: rgba(255, 255, 255, 0.08); border-radius: 8px; }
+.mini-text { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; }
+.mini-text strong, .mini-text span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mini-text strong { font-size: 0.82rem; font-weight: 600; color: #fff; }
+.mini-text span { font-size: 0.7rem; color: rgba(255, 255, 255, 0.6); }
+.mini-ctl { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; font-size: 0.85rem; color: var(--primary-clr); background: rgba(163, 162, 164, 0.2); border: 0; border-radius: 50%; cursor: pointer; }
+.mini-ctl:hover { background: rgba(255, 255, 255, 0.22); }
+.mini-ctl.is-main { width: 38px; height: 38px; color: #fff; background: #eb0b0b; }
+body.is-mini { overflow: hidden; }
+body.is-mini .titlebar, body.is-mini .search-bar, body.is-mini .search-meta, body.is-mini .search-results,
+body.is-mini .album-cover, body.is-mini .music-player, body.is-mini .library-panel, body.is-mini .toast,
+body.is-mini .site-footer { display: none; }
+body.is-mini .app-shell { min-height: 0; height: 100vh; justify-content: center; }
+body.is-web.is-mini .app-shell { height: auto; margin-top: 4vh; }
