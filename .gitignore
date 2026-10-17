@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+
+# Downloaded binaries (17 MB binary, downloaded by setup.bat, not stored in git)
+vendor/
+
+# Generated / packaged output
+dist/
+build/
+release/
+out/
+
+# Test harnesses, test files & coverage reports
+js/*-test.js
+js/selftest.js
+js/web-e2e.js
+*.test.js
+test-results/
+coverage/
+
+# Logs & diagnostics
+*.log
+npm-debug.log*
+yarn-error.log*
+diag.log
+
+# Temporary, backup & lock files
+*.tmp
+*.temp
+*.bak
+*.swp
+*.lnk
+
+# Cache directories
+.cache/
+.parcel-cache/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Local state & caches
+sangeetha-state.json
+stream-cache.json
+stream-cache.json.tmp

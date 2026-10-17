@@ -1,0 +1,74 @@
+{
+  "name": "naada_tarangini",
+  "productName": "Naada Tarangini",
+  "version": "1.1.0",
+  "description": "Naada Tarangini - search and play YouTube Music ad-free, as a website or a floating always-on-top Windows widget",
+  "main": "electron-main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "web": "node js/server.js",
+    "web:open": "node js/web-preview.js",
+    "smoke": "electron js/selftest.js",
+    "test": "node js/epipe-test.js && node js/stream-cache-test.js && node js/api-test.js",
+    "test:web": "electron js/web-e2e.js",
+    "dist": "electron-builder --win --publish never"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "author": "Vinayaka N Walshettar <https://www.nayaka100.in/>",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^44.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "com.naadatarangini.player",
+    "productName": "Naada Tarangini",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron-main.js",
+      "index.html",
+      "style.css",
+      "sw.js",
+      "manifest.webmanifest",
+      "sangeeta_icon.png",
+      "assets/covers/*",
+      "js/**/*",
+      "!js/*-test.js",
+      "!js/selftest.js",
+      "!js/web-e2e.js",
+      "!js/web-preview.js",
+      "!js/server.js"
+    ],
+    "extraResources": [
+      {
+        "from": "vendor/yt-dlp.exe",
+        "to": "vendor/yt-dlp.exe"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "sangeeta_icon.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "Naada Tarangini",
+      "runAfterFinish": true,
+      "artifactName": "naada_tarangini-setup-${version}.${ext}"
+    }
+  }
+}

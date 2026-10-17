@@ -1,0 +1,44 @@
+# Keep the build context small and, more importantly, make sure nothing that
+# must not be published is ever available to COPY.
+
+# Dependencies: reinstalled in the image, and the Windows build of electron
+# would be wrong on Linux anyway.
+node_modules/
+
+# The 17 MB yt-dlp binary is a Windows .exe. The image installs the Linux build
+# separately in the Dockerfile.
+vendor/
+
+# Source that has no place in the web image. The desktop app is built on
+# Windows; these files are not used by server.js.
+js/preload.js
+js/desktop-shortcut.js
+js/web-preview.js
+js/selftest.js
+js/epipe-test.js
+js/stream-cache-test.js
+js/api-test.js
+js/web-e2e.js
+
+# Windows launchers. .bat cannot run on Linux, and shipping them would suggest
+# otherwise.
+run.bat
+run-web.bat
+setup.bat
+
+# Local machine state
+.env
+.env.*
+*.log
+stream-cache.json
+stream-cache.json.tmp
+sangeetha-state.json
+diag.log
+
+# Editor / OS noise and git history
+.git/
+.gitignore
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
